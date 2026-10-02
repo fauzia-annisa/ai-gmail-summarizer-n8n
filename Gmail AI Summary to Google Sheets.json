@@ -1,0 +1,232 @@
+{
+  "name": "Gmail AI Summary to Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "in:inbox",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "4583aa6e-a8f7-4f17-8bcb-242f3cee33a9",
+      "name": "New Email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "40yAHRsxDyp9zm8y",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-2.5-flash",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Read the email below. Respond in EXACTLY this format and nothing else:\nSUMMARY:\n- bullet 1\n- bullet 2\n- bullet 3\nDRAFT:\n<a polite reply of exactly 2 sentences>\n\nFrom: {{ $json.from.text }}\nSubject: {{ $json.subject }}\nBody:\n{{ ($json.text || \"\").slice(0, 8000) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "4f984c7c-1067-4691-9570-79ce1149691e",
+      "name": "Summarize and Draft Reply",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1TboaRhwbBwaoEYQ-XRPtpqrQ3DYXx2tE3wZXnTSnNrA",
+          "mode": "list",
+          "cachedResultName": "AI Email Summary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1TboaRhwbBwaoEYQ-XRPtpqrQ3DYXx2tE3wZXnTSnNrA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $(\"New Email\").item.json.date }}",
+            "Sender": "={{ $(\"New Email\").item.json.from.text }}",
+            "Subject": "={{ $(\"New Email\").item.json.subject }}",
+            "AI Summary": "={{ ($json.content.parts[0].text || \"\").split(\"DRAFT:\")[0].replace(\"SUMMARY:\", \"\").trim() }}",
+            "AI Draft": "={{ (($json.content.parts[0].text || \"\").split(\"DRAFT:\")[1] || \"\").trim() }}"
+          },
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender",
+              "displayName": "Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Summary",
+              "displayName": "AI Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Draft",
+              "displayName": "AI Draft",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "099e79a5-ff14-4368-909d-d514814f0c04",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        1888
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dlTTKsQ6nvb1uTuj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $(\"New Email\").item.json.id }}"
+      },
+      "id": "e75176f9-0a6f-48f0-9c4d-93eb07bb9496",
+      "name": "Mark Email as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ],
+      "webhookId": "5363c100-4016-482e-aba7-db23d1fee1ad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "40yAHRsxDyp9zm8y",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "New Email": {
+      "main": [
+        [
+          {
+            "node": "Summarize and Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize and Draft Reply": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Mark Email as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "62ed7fdb-117a-47ee-b842-d0c2f2c38d67",
+  "meta": {
+    "instanceId": "ac3def9009e54159b96d69ab9e22eb6403c6f723880c12f1670449c7ceca759b"
+  },
+  "nodeGroups": [],
+  "id": "zQk0uMyvTkcTMlaC",
+  "tags": []
+}
